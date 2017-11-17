@@ -36,6 +36,7 @@ pln.numOfVoxels     = prod(ct.cubeDim);
 pln.isoCenter       = ones(pln.numOfBeams,1) * matRad_getIsoCenter(cst,ct,0);
 pln.voxelDimensions = ct.cubeDim;
 pln.radiationMode   = 'photons';     % either photons / protons / carbon
+%pln.radiationMode   = {'carbon','carbon','photons'};     % either photons / protons / carbon
 pln.bioOptimization = 'none';        % none: physical optimization;             const_RBExD; constant RBE of 1.1;
                                      % LEMIV_effect: effect-based optimization; LEMIV_RBExD: optimization of RBE-weighted dose
 pln.numOfFractions  = 30;
@@ -47,9 +48,12 @@ pln.machine         = 'Generic';
 matRadGUI
 
 %% generate steering file
-stf = matRad_generateStf(ct,cst,pln);
+stf = matRad_generateStf(ct,cst,pln); % do not foget this also need adjustment!!!
 
 %% dose calculation
+%todo write wrapper function
+%dij = matRad_multiModDoseCalcWrapper(ct,stf,pln,cst);
+
 if strcmp(pln.radiationMode,'photons')
     dij = matRad_calcPhotonDose(ct,stf,pln,cst);
     %dij = matRad_calcPhotonDoseVmc(ct,stf,pln,cst);

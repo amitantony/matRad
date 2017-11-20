@@ -32,6 +32,14 @@ function stf = matRad_generateStf(ct,cst,pln,visMode)
 %
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+if numel(pln)>1 
+    fprintf('I see Multiple modalities. I like.\n');
+end
+mod=1; ang=0;
+% Define steering file like struct. Prellocating for speed.
+stf = struct;
+
+while (mod <= numel(pln))
 
 fprintf('matRad: Generating stf struct... ');
 
@@ -39,11 +47,11 @@ if nargin < 4
     visMode = 0;
 end
 
-if numel(pln.gantryAngles) ~= numel(pln.couchAngles)
+if numel(pln(mod).gantryAngles) ~= numel(pln(mod).couchAngles)
     error('Inconsistent number of gantry and couch angles.');
 end
 
-if pln.bixelWidth < 0 || ~isfinite(pln.bixelWidth)
+if pln(mod).bixelWidth < 0 || ~isfinite(pln(mod).bixelWidth)
    error('bixel width (spot distance) needs to be a real number [mm] larger than zero.');
 end
 
@@ -75,7 +83,7 @@ if isempty(V)
 end
 
 % prepare structures necessary for particles
-fileName = [pln.radiationMode '_' pln.machine];
+fileName = [pln(mod).radiationMode '_' pln(mod).machine];
 try
    load([fileparts(mfilename('fullpath')) filesep fileName]);
    SAD = machine.meta.SAD;
@@ -83,7 +91,7 @@ catch
    error(['Could not find the following machine file: ' fileName ]); 
 end
 
-if strcmp(pln.radiationMode,'protons') || strcmp(pln.radiationMode,'carbon')
+if strcmp(pln(mod).radiationMode,'protons') || strcmp(pln(mod).radiationMode,'carbon')
       
     availableEnergies = [machine.data.energy];
     availablePeakPos  = [machine.data.peakPos] + [machine.data.offset];
@@ -97,31 +105,29 @@ end
 % Convert linear indices to 3D voxel coordinates
 [coordsY_vox, coordsX_vox, coordsZ_vox] = ind2sub(ct.cubeDim,V);
 
-% Define steering file like struct. Prellocating for speed.
-stf = struct;
 
 % loop over all angles
-for i = 1:length(pln.gantryAngles)
+for i = 1:length(pln(mod).gantryAngles)
     
     % Correct for iso center position. Whit this correction Isocenter is
     % (0,0,0) [mm]
-    coordsX = coordsX_vox*ct.resolution.x - pln.isoCenter(i,1);
-    coordsY = coordsY_vox*ct.resolution.y - pln.isoCenter(i,2);
-    coordsZ = coordsZ_vox*ct.resolution.z - pln.isoCenter(i,3);
+    coordsX = coordsX_vox*ct.resolution.x - pln(mod).isoCenter(i,1);
+    coordsY = coordsY_vox*ct.resolution.y - pln(mod).isoCenter(i,2);
+    coordsZ = coordsZ_vox*ct.resolution.z - pln(mod).isoCenter(i,3);
 
     % Save meta information for treatment plan
-    stf(i).gantryAngle   = pln.gantryAngles(i);
-    stf(i).couchAngle    = pln.couchAngles(i);
-    stf(i).bixelWidth    = pln.bixelWidth;
-    stf(i).radiationMode = pln.radiationMode;
-    stf(i).SAD           = SAD;
-    stf(i).isoCenter     = pln.isoCenter(i,:);
+    stf(i+ang).gantryAngle   = pln(mod).gantryAngles(i);
+    stf(i+ang).couchAngle    = pln(mod).couchAngles(i);
+    stf(i+ang).bixelWidth    = pln(mod).bixelWidth;
+    stf(i+ang).radiationMode = pln(mod).radiationMode;
+    stf(i+ang).SAD           = SAD;
+    stf(i+ang).isoCenter     = pln(mod).isoCenter(i,:);
     
     % Get the (active) rotation matrix. We perform a passive/system 
     % rotation with row vector coordinates, which would introduce two 
     % inversions / transpositions of the matrix, thus no changes to the
     % rotation matrix are necessary
-    rotMat_system_T = matRad_getRotationMatrix(pln.gantryAngles(i),pln.couchAngles(i));
+    rotMat_system_T = matRad_getRotationMatrix(pln(mod).gantryAngles(i),pln(mod).couchAngles(i));
     
     rot_coords = [coordsX coordsY coordsZ]*rotMat_system_T;
     
@@ -131,26 +137,26 @@ for i = 1:length(pln.gantryAngles)
     
     % Take unique rows values for beamlets positions. Calculate position of
     % central ray for every bixel    
-    rayPos = unique(pln.bixelWidth*round([            coordsAtIsoCenterPlane(:,1) ... 
+    rayPos = unique(pln(mod).bixelWidth*round([            coordsAtIsoCenterPlane(:,1) ... 
                                           zeros(size(coordsAtIsoCenterPlane,1),1) ...
-                                                      coordsAtIsoCenterPlane(:,2)]/pln.bixelWidth),'rows');
+                                                      coordsAtIsoCenterPlane(:,2)]/pln(mod).bixelWidth),'rows');
                                                   
     % pad ray position array if resolution of target voxel grid not sufficient
     maxCtResolution = max([ct.resolution.x ct.resolution.y ct.resolution.z]);
-    if pln.bixelWidth < maxCtResolution
+    if pln(mod).bixelWidth < maxCtResolution
         origRayPos = rayPos;
-        for j = -floor(maxCtResolution/pln.bixelWidth):floor(maxCtResolution/pln.bixelWidth)
-            for k = -floor(maxCtResolution/pln.bixelWidth):floor(maxCtResolution/pln.bixelWidth)
+        for j = -floor(maxCtResolution/pln(mod).bixelWidth):floor(maxCtResolution/pln(mod).bixelWidth)
+            for k = -floor(maxCtResolution/pln(mod).bixelWidth):floor(maxCtResolution/pln(mod).bixelWidth)
                 if abs(j)+abs(k)==0
                     continue;
                 end                
-                rayPos = [rayPos; origRayPos(:,1)+j*pln.bixelWidth origRayPos(:,2) origRayPos(:,3)+k*pln.bixelWidth];
+                rayPos = [rayPos; origRayPos(:,1)+j*pln(mod).bixelWidth origRayPos(:,2) origRayPos(:,3)+k*pln(mod).bixelWidth];
             end
         end
      end
 
      % remove spaces within rows of bixels for DAO
-     if pln.runDAO
+     if pln(mod).runDAO
          % create single x,y,z vectors
          x = rayPos(:,1);
          y = rayPos(:,2);
@@ -160,9 +166,9 @@ for i = 1:length(pln.gantryAngles)
              x_loc = x(z == uniZ(j));
              x_min = min(x_loc);
              x_max = max(x_loc);
-             x = [x; [x_min:pln.bixelWidth:x_max]'];
-             y = [y; zeros((x_max-x_min)/pln.bixelWidth+1,1)];
-             z = [z; uniZ(j)*ones((x_max-x_min)/pln.bixelWidth+1,1)];             
+             x = [x; [x_min:pln(mod).bixelWidth:x_max]'];
+             y = [y; zeros((x_max-x_min)/pln(mod).bixelWidth+1,1)];
+             z = [z; uniZ(j)*ones((x_max-x_min)/pln(mod).bixelWidth+1,1)];             
          end
          
          rayPos = [x,y,z];
@@ -172,53 +178,53 @@ for i = 1:length(pln.gantryAngles)
     rayPos = unique(rayPos,'rows');
     
     % Save the number of rays
-    stf(i).numOfRays = size(rayPos,1);
+    stf(i+ang).numOfRays = size(rayPos,1);
     
     % Save ray and target position in beam eye's view (bev)
-    for j = 1:stf(i).numOfRays
-        stf(i).ray(j).rayPos_bev = rayPos(j,:);
-        stf(i).ray(j).targetPoint_bev = [2*stf(i).ray(j).rayPos_bev(1) ...
+    for j = 1:stf(i+ang).numOfRays
+        stf(i+ang).ray(j).rayPos_bev = rayPos(j,:);
+        stf(i+ang).ray(j).targetPoint_bev = [2*stf(i+ang).ray(j).rayPos_bev(1) ...
                                                                SAD ...
-                                         2*stf(i).ray(j).rayPos_bev(3)];
+                                         2*stf(i+ang).ray(j).rayPos_bev(3)];
     end
     
     % source position in bev
-    stf(i).sourcePoint_bev = [0 -SAD 0];
+    stf(i+ang).sourcePoint_bev = [0 -SAD 0];
     
     % get (active) rotation matrix 
     % transpose matrix because we are working with row vectors
-    rotMat_vectors_T = transpose(matRad_getRotationMatrix(pln.gantryAngles(i),pln.couchAngles(i)));
+    rotMat_vectors_T = transpose(matRad_getRotationMatrix(pln(mod).gantryAngles(i),pln(mod).couchAngles(i)));
     
     
-    stf(i).sourcePoint = stf(i).sourcePoint_bev*rotMat_vectors_T;
+    stf(i+ang).sourcePoint = stf(i+ang).sourcePoint_bev*rotMat_vectors_T;
     
     % Save ray and target position in lps system.
-    for j = 1:stf(i).numOfRays
-        stf(i).ray(j).rayPos      = stf(i).ray(j).rayPos_bev*rotMat_vectors_T;
-        stf(i).ray(j).targetPoint = stf(i).ray(j).targetPoint_bev*rotMat_vectors_T;
-        if strcmp(pln.radiationMode,'photons') 
-            stf(i).ray(j).rayCorners_SCD = (repmat([0, machine.meta.SCD - SAD, 0],4,1)+ (machine.meta.SCD/SAD) * ...
-                                                             [rayPos(j,:) + [+stf(i).bixelWidth/2,0,+stf(i).bixelWidth/2];...
-                                                              rayPos(j,:) + [-stf(i).bixelWidth/2,0,+stf(i).bixelWidth/2];...
-                                                              rayPos(j,:) + [-stf(i).bixelWidth/2,0,-stf(i).bixelWidth/2];...
-                                                              rayPos(j,:) + [+stf(i).bixelWidth/2,0,-stf(i).bixelWidth/2]])*rotMat_vectors_T;
+    for j = 1:stf(i+ang).numOfRays
+        stf(i+ang).ray(j).rayPos      = stf(i+ang).ray(j).rayPos_bev*rotMat_vectors_T;
+        stf(i+ang).ray(j).targetPoint = stf(i+ang).ray(j).targetPoint_bev*rotMat_vectors_T;
+        if strcmp(pln(mod).radiationMode,'photons') 
+            stf(i+ang).ray(j).rayCorners_SCD = (repmat([0, machine.meta.SCD - SAD, 0],4,1)+ (machine.meta.SCD/SAD) * ...
+                                                             [rayPos(j,:) + [+stf(i+ang).bixelWidth/2,0,+stf(i+ang).bixelWidth/2];...
+                                                              rayPos(j,:) + [-stf(i+ang).bixelWidth/2,0,+stf(i+ang).bixelWidth/2];...
+                                                              rayPos(j,:) + [-stf(i+ang).bixelWidth/2,0,-stf(i+ang).bixelWidth/2];...
+                                                              rayPos(j,:) + [+stf(i+ang).bixelWidth/2,0,-stf(i+ang).bixelWidth/2]])*rotMat_vectors_T;
         end
     end
     
     % loop over all rays to determine meta information for each ray    
-    stf(i).numOfBixelsPerRay = ones(1,stf(i).numOfRays);
+    stf(i+ang).numOfBixelsPerRay = ones(1,stf(i+ang).numOfRays);
     
-    for j = stf(i).numOfRays:-1:1
+    for j = stf(i+ang).numOfRays:-1:1
 
         % ray tracing necessary to determine depth of the target
-        [~,l,rho,~,~] = matRad_siddonRayTracer(stf(i).isoCenter, ...
+        [~,l,rho,~,~] = matRad_siddonRayTracer(stf(i+ang).isoCenter, ...
                              ct.resolution, ...
-                             stf(i).sourcePoint, ...
-                             stf(i).ray(j).targetPoint, ...
+                             stf(i+ang).sourcePoint, ...
+                             stf(i+ang).ray(j).targetPoint, ...
                              [{ct.cube{1}} {voiTarget}]);
 
         % find appropriate energies for particles
-       if strcmp(stf(i).radiationMode,'protons') || strcmp(stf(i).radiationMode,'carbon')
+       if strcmp(stf(i+ang).radiationMode,'protons') || strcmp(stf(i+ang).radiationMode,'carbon')
 
            % target hit
            if sum(rho{2}) > 0 
@@ -236,38 +242,38 @@ for i = 1:length(pln.gantryAngles)
                     error('Inconsistency during ray tracing.');
                 end
 
-                stf(i).ray(j).energy = [];
+                stf(i+ang).ray(j).energy = [];
 
                 % Save energies in stf struct
                 for k = 1:numel(targetEntry)
-                    stf(i).ray(j).energy = [stf(i).ray(j).energy availableEnergies(availablePeakPos>=targetEntry(k)&availablePeakPos<=targetExit(k))];
+                    stf(i+ang).ray(j).energy = [stf(i+ang).ray(j).energy availableEnergies(availablePeakPos>=targetEntry(k)&availablePeakPos<=targetExit(k))];
                 end
   
                 % book keeping & calculate focus index
-                stf(i).numOfBixelsPerRay(j) = numel([stf(i).ray(j).energy]);
+                stf(i+ang).numOfBixelsPerRay(j) = numel([stf(i+ang).ray(j).energy]);
                 currentMinimumFWHM = matRad_interp1(machine.meta.LUT_bxWidthminFWHM(1,:)',...
                                              machine.meta.LUT_bxWidthminFWHM(2,:)',...
-                                             pln.bixelWidth);
-                focusIx  =  ones(stf(i).numOfBixelsPerRay(j),1);
+                                             pln(mod).bixelWidth);
+                focusIx  =  ones(stf(i+ang).numOfBixelsPerRay(j),1);
                 [~, vEnergyIx] = min(abs(bsxfun(@minus,[machine.data.energy]',...
-                                repmat(stf(i).ray(j).energy,length([machine.data]),1))));
+                                repmat(stf(i+ang).ray(j).energy,length([machine.data]),1))));
 
                 % get for each spot the focus index
-                for k = 1:stf(i).numOfBixelsPerRay(j)                    
+                for k = 1:stf(i+ang).numOfBixelsPerRay(j)                    
                     focusIx(k) = find(machine.data(vEnergyIx(k)).initFocus.SisFWHMAtIso > currentMinimumFWHM,1,'first');
                 end
 
-                stf(i).ray(j).focusIx = focusIx';
+                stf(i+ang).ray(j).focusIx = focusIx';
                  
             else % target not hit
-                stf(i).ray(j)               = [];
-                stf(i).numOfBixelsPerRay(j) = [];
+                stf(i+ang).ray(j)               = [];
+                stf(i+ang).numOfBixelsPerRay(j) = [];
            end
            
-       elseif strcmp(stf(i).radiationMode,'photons')
+       elseif strcmp(stf(i+ang).radiationMode,'photons')
            
          % book keeping for photons
-         stf(i).ray(j).energy = machine.data.energy;
+         stf(i+ang).ray(j).energy = machine.data.energy;
          
        else
           error('Error generating stf struct: invalid radiation modality.');
@@ -276,14 +282,14 @@ for i = 1:length(pln.gantryAngles)
     end
     
     % store total number of rays for beam-i
-    stf(i).numOfRays = size(stf(i).ray,2);
+    stf(i+ang).numOfRays = size(stf(i+ang).ray,2);
      
     % post processing for particle remove energy slices
-    if strcmp(stf(i).radiationMode,'protons') || strcmp(stf(i).radiationMode,'carbon')
+    if strcmp(stf(i+ang).radiationMode,'protons') || strcmp(stf(i+ang).radiationMode,'carbon')
         
         % get minimum energy per field
-        minEnergy = min([stf(i).ray.energy]);
-        maxEnergy = max([stf(i).ray.energy]);
+        minEnergy = min([stf(i+ang).ray.energy]);
+        maxEnergy = max([stf(i+ang).ray.energy]);
         
         % get corresponding peak position
         availableEnergies = [machine.data.energy];
@@ -317,29 +323,29 @@ for i = 1:length(pln.gantryAngles)
             ixRun = ixRun + 1;
         end
         
-        for j = stf(i).numOfRays:-1:1
-            for k = stf(i).numOfBixelsPerRay(j):-1:1
-                maskEnergy = stf(i).ray(j).energy(k) == availableEnergies;
+        for j = stf(i+ang).numOfRays:-1:1
+            for k = stf(i+ang).numOfBixelsPerRay(j):-1:1
+                maskEnergy = stf(i+ang).ray(j).energy(k) == availableEnergies;
                 if ~useEnergyBool(maskEnergy)
-                    stf(i).ray(j).energy(k)     = [];
-                    stf(i).ray(j).focusIx(k)    = [];
-                    stf(i).numOfBixelsPerRay(j) = stf(i).numOfBixelsPerRay(j) - 1;
+                    stf(i+ang).ray(j).energy(k)     = [];
+                    stf(i+ang).ray(j).focusIx(k)    = [];
+                    stf(i+ang).numOfBixelsPerRay(j) = stf(i+ang).numOfBixelsPerRay(j) - 1;
                 end
             end
-            if isempty(stf(i).ray(j).energy)
-                stf(i).ray(j) = [];
-                stf(i).numOfBixelsPerRay(j) = [];
-                stf(i).numOfRays = stf(i).numOfRays - 1;
+            if isempty(stf(i+ang).ray(j).energy)
+                stf(i+ang).ray(j) = [];
+                stf(i+ang).numOfBixelsPerRay(j) = [];
+                stf(i+ang).numOfRays = stf(i+ang).numOfRays - 1;
             end
         end
         
     end
     
     % save total number of bixels
-    stf(i).totalNumOfBixels = sum(stf(i).numOfBixelsPerRay);
+    stf(i+ang).totalNumOfBixels = sum(stf(i+ang).numOfBixelsPerRay);
     
     % Show progress
-    matRad_progress(i,length(pln.gantryAngles));
+    matRad_progress(i,length(pln(mod).gantryAngles));
 
     %% visualization
     if visMode > 0
@@ -357,9 +363,9 @@ for i = 1:length(pln.gantryAngles)
             
             % generate a 3D rectangular grid centered at isocenter in
             % voxel coordinates
-            [X,Y,Z] = meshgrid((1:ct.cubeDim(2))-stf(i).isoCenter(1)/ct.resolution.x, ...
-                               (1:ct.cubeDim(1))-stf(i).isoCenter(2)/ct.resolution.y, ...
-                               (1:ct.cubeDim(3))-stf(i).isoCenter(3)/ct.resolution.z);
+            [X,Y,Z] = meshgrid((1:ct.cubeDim(2))-stf(i+ang).isoCenter(1)/ct.resolution.x, ...
+                               (1:ct.cubeDim(1))-stf(i+ang).isoCenter(2)/ct.resolution.y, ...
+                               (1:ct.cubeDim(3))-stf(i+ang).isoCenter(3)/ct.resolution.z);
             
             % computes surface
             patSurfCube      = 0*ct.cube{1};
@@ -388,30 +394,30 @@ for i = 1:length(pln.gantryAngles)
         plot3(rayPos(:,1),rayPos(:,2),rayPos(:,3),'k.');
         
         % Plot matrix border of matrix at isocenter
-        for j = 1:stf(i).numOfRays
+        for j = 1:stf(i+ang).numOfRays
             
             % Compute border for every bixels
-            targetPoint_vox_X_1 = stf(i).ray(j).targetPoint_bev(:,1) + pln.bixelWidth;
-            targetPoint_vox_Y_1 = stf(i).ray(j).targetPoint_bev(:,2);
-            targetPoint_vox_Z_1 = stf(i).ray(j).targetPoint_bev(:,3) + pln.bixelWidth;
+            targetPoint_vox_X_1 = stf(i+ang).ray(j).targetPoint_bev(:,1) + pln(mod).bixelWidth;
+            targetPoint_vox_Y_1 = stf(i+ang).ray(j).targetPoint_bev(:,2);
+            targetPoint_vox_Z_1 = stf(i+ang).ray(j).targetPoint_bev(:,3) + pln(mod).bixelWidth;
             
-            targetPoint_vox_X_2 = stf(i).ray(j).targetPoint_bev(:,1) + pln.bixelWidth;
-            targetPoint_vox_Y_2 = stf(i).ray(j).targetPoint_bev(:,2);
-            targetPoint_vox_Z_2 = stf(i).ray(j).targetPoint_bev(:,3) - pln.bixelWidth;
+            targetPoint_vox_X_2 = stf(i+ang).ray(j).targetPoint_bev(:,1) + pln(mod).bixelWidth;
+            targetPoint_vox_Y_2 = stf(i+ang).ray(j).targetPoint_bev(:,2);
+            targetPoint_vox_Z_2 = stf(i+ang).ray(j).targetPoint_bev(:,3) - pln(mod).bixelWidth;
             
-            targetPoint_vox_X_3 = stf(i).ray(j).targetPoint_bev(:,1) - pln.bixelWidth;
-            targetPoint_vox_Y_3 = stf(i).ray(j).targetPoint_bev(:,2);
-            targetPoint_vox_Z_3 = stf(i).ray(j).targetPoint_bev(:,3) - pln.bixelWidth;
+            targetPoint_vox_X_3 = stf(i+ang).ray(j).targetPoint_bev(:,1) - pln(mod).bixelWidth;
+            targetPoint_vox_Y_3 = stf(i+ang).ray(j).targetPoint_bev(:,2);
+            targetPoint_vox_Z_3 = stf(i+ang).ray(j).targetPoint_bev(:,3) - pln(mod).bixelWidth;
             
-            targetPoint_vox_X_4 = stf(i).ray(j).targetPoint_bev(:,1) - pln.bixelWidth;
-            targetPoint_vox_Y_4 = stf(i).ray(j).targetPoint_bev(:,2);
-            targetPoint_vox_Z_4 = stf(i).ray(j).targetPoint_bev(:,3) + pln.bixelWidth;
+            targetPoint_vox_X_4 = stf(i+ang).ray(j).targetPoint_bev(:,1) - pln(mod).bixelWidth;
+            targetPoint_vox_Y_4 = stf(i+ang).ray(j).targetPoint_bev(:,2);
+            targetPoint_vox_Z_4 = stf(i+ang).ray(j).targetPoint_bev(:,3) + pln(mod).bixelWidth;
             
             % plot
-            plot3([stf(i).sourcePoint_bev(1) targetPoint_vox_X_1],[stf(i).sourcePoint_bev(2) targetPoint_vox_Y_1],[stf(i).sourcePoint_bev(3) targetPoint_vox_Z_1],'g')
-            plot3([stf(i).sourcePoint_bev(1) targetPoint_vox_X_2],[stf(i).sourcePoint_bev(2) targetPoint_vox_Y_2],[stf(i).sourcePoint_bev(3) targetPoint_vox_Z_2],'g')
-            plot3([stf(i).sourcePoint_bev(1) targetPoint_vox_X_3],[stf(i).sourcePoint_bev(2) targetPoint_vox_Y_3],[stf(i).sourcePoint_bev(3) targetPoint_vox_Z_3],'g')
-            plot3([stf(i).sourcePoint_bev(1) targetPoint_vox_X_4],[stf(i).sourcePoint_bev(2) targetPoint_vox_Y_4],[stf(i).sourcePoint_bev(3) targetPoint_vox_Z_4],'g')
+            plot3([stf(i+ang).sourcePoint_bev(1) targetPoint_vox_X_1],[stf(i+ang).sourcePoint_bev(2) targetPoint_vox_Y_1],[stf(i+ang).sourcePoint_bev(3) targetPoint_vox_Z_1],'g')
+            plot3([stf(i+ang).sourcePoint_bev(1) targetPoint_vox_X_2],[stf(i+ang).sourcePoint_bev(2) targetPoint_vox_Y_2],[stf(i+ang).sourcePoint_bev(3) targetPoint_vox_Z_2],'g')
+            plot3([stf(i+ang).sourcePoint_bev(1) targetPoint_vox_X_3],[stf(i+ang).sourcePoint_bev(2) targetPoint_vox_Y_3],[stf(i+ang).sourcePoint_bev(3) targetPoint_vox_Z_3],'g')
+            plot3([stf(i+ang).sourcePoint_bev(1) targetPoint_vox_X_4],[stf(i+ang).sourcePoint_bev(2) targetPoint_vox_Y_4],[stf(i+ang).sourcePoint_bev(3) targetPoint_vox_Z_4],'g')
             
         end
         
@@ -438,18 +444,18 @@ for i = 1:length(pln.gantryAngles)
         plot3(isocenter_plane_coor(:,1),isocenter_plane_coor(:,2),isocenter_plane_coor(:,3),'y.');
         
         % Plot rotated bixels border.
-        for j = 1:stf(i).numOfRays
+        for j = 1:stf(i+ang).numOfRays
             % Generate rotated projection target points.
-            targetPoint_vox_1_rotated = [stf(i).ray(j).targetPoint_bev(:,1) + pln.bixelWidth,stf(i).ray(j).targetPoint_bev(:,2),stf(i).ray(j).targetPoint_bev(:,3) + pln.bixelWidth]*rotMat_vectors_T;
-            targetPoint_vox_2_rotated = [stf(i).ray(j).targetPoint_bev(:,1) + pln.bixelWidth,stf(i).ray(j).targetPoint_bev(:,2),stf(i).ray(j).targetPoint_bev(:,3) - pln.bixelWidth]*rotMat_vectors_T;
-            targetPoint_vox_3_rotated = [stf(i).ray(j).targetPoint_bev(:,1) - pln.bixelWidth,stf(i).ray(j).targetPoint_bev(:,2),stf(i).ray(j).targetPoint_bev(:,3) - pln.bixelWidth]*rotMat_vectors_T;
-            targetPoint_vox_4_rotated = [stf(i).ray(j).targetPoint_bev(:,1) - pln.bixelWidth,stf(i).ray(j).targetPoint_bev(:,2),stf(i).ray(j).targetPoint_bev(:,3) + pln.bixelWidth]*rotMat_vectors_T;
+            targetPoint_vox_1_rotated = [stf(i+ang).ray(j).targetPoint_bev(:,1) + pln(mod).bixelWidth,stf(i+ang).ray(j).targetPoint_bev(:,2),stf(i+ang).ray(j).targetPoint_bev(:,3) + pln(mod).bixelWidth]*rotMat_vectors_T;
+            targetPoint_vox_2_rotated = [stf(i+ang).ray(j).targetPoint_bev(:,1) + pln(mod).bixelWidth,stf(i+ang).ray(j).targetPoint_bev(:,2),stf(i+ang).ray(j).targetPoint_bev(:,3) - pln(mod).bixelWidth]*rotMat_vectors_T;
+            targetPoint_vox_3_rotated = [stf(i+ang).ray(j).targetPoint_bev(:,1) - pln(mod).bixelWidth,stf(i+ang).ray(j).targetPoint_bev(:,2),stf(i+ang).ray(j).targetPoint_bev(:,3) - pln(mod).bixelWidth]*rotMat_vectors_T;
+            targetPoint_vox_4_rotated = [stf(i+ang).ray(j).targetPoint_bev(:,1) - pln(mod).bixelWidth,stf(i+ang).ray(j).targetPoint_bev(:,2),stf(i+ang).ray(j).targetPoint_bev(:,3) + pln(mod).bixelWidth]*rotMat_vectors_T;
             
             % Plot rotated target points.
-            plot3([stf(i).sourcePoint(1) targetPoint_vox_1_rotated(:,1)],[stf(i).sourcePoint(2) targetPoint_vox_1_rotated(:,2)],[stf(i).sourcePoint(3) targetPoint_vox_1_rotated(:,3)],'g')
-            plot3([stf(i).sourcePoint(1) targetPoint_vox_2_rotated(:,1)],[stf(i).sourcePoint(2) targetPoint_vox_2_rotated(:,2)],[stf(i).sourcePoint(3) targetPoint_vox_2_rotated(:,3)],'g')
-            plot3([stf(i).sourcePoint(1) targetPoint_vox_3_rotated(:,1)],[stf(i).sourcePoint(2) targetPoint_vox_3_rotated(:,2)],[stf(i).sourcePoint(3) targetPoint_vox_3_rotated(:,3)],'g')
-            plot3([stf(i).sourcePoint(1) targetPoint_vox_4_rotated(:,1)],[stf(i).sourcePoint(2) targetPoint_vox_4_rotated(:,2)],[stf(i).sourcePoint(3) targetPoint_vox_4_rotated(:,3)],'g')
+            plot3([stf(i+ang).sourcePoint(1) targetPoint_vox_1_rotated(:,1)],[stf(i+ang).sourcePoint(2) targetPoint_vox_1_rotated(:,2)],[stf(i+ang).sourcePoint(3) targetPoint_vox_1_rotated(:,3)],'g')
+            plot3([stf(i+ang).sourcePoint(1) targetPoint_vox_2_rotated(:,1)],[stf(i+ang).sourcePoint(2) targetPoint_vox_2_rotated(:,2)],[stf(i+ang).sourcePoint(3) targetPoint_vox_2_rotated(:,3)],'g')
+            plot3([stf(i+ang).sourcePoint(1) targetPoint_vox_3_rotated(:,1)],[stf(i+ang).sourcePoint(2) targetPoint_vox_3_rotated(:,2)],[stf(i+ang).sourcePoint(3) targetPoint_vox_3_rotated(:,3)],'g')
+            plot3([stf(i+ang).sourcePoint(1) targetPoint_vox_4_rotated(:,1)],[stf(i+ang).sourcePoint(2) targetPoint_vox_4_rotated(:,2)],[stf(i+ang).sourcePoint(3) targetPoint_vox_4_rotated(:,3)],'g')
         end
         
         % surface rendering
@@ -471,16 +477,18 @@ for i = 1:length(pln.gantryAngles)
     end
     
     % include rangeshifter data if not yet available 
-    if strcmp(pln.radiationMode, 'protons') || strcmp(pln.radiationMode, 'carbon')
-        for j = 1:stf(i).numOfRays
-            for k = 1:numel(stf(i).ray(j).energy)
-                stf(i).ray(j).rangeShifter(k).ID = 0;
-                stf(i).ray(j).rangeShifter(k).eqThickness = 0;
-                stf(i).ray(j).rangeShifter(k).sourceRashiDistance = 0;
+    if strcmp(pln(mod).radiationMode, 'protons') || strcmp(pln(mod).radiationMode, 'carbon')
+        for j = 1:stf(i+ang).numOfRays
+            for k = 1:numel(stf(i+ang).ray(j).energy)
+                stf(i+ang).ray(j).rangeShifter(k).ID = 0;
+                stf(i+ang).ray(j).rangeShifter(k).eqThickness = 0;
+                stf(i+ang).ray(j).rangeShifter(k).sourceRashiDistance = 0;
             end
         end
     end
         
-end    
-
+end  
+ang=ang+numel(pln(mod).gantryAngles);
+mod=mod+1;
+end
 end

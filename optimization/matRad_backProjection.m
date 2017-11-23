@@ -62,7 +62,7 @@ else
         for i = 1:options.numOfScenarios
             
             % calculate effect
-            linTerm  = dij.mAlphaDose{i} * w;
+            linTerm  = dij(j).mAlphaDose{i} * w;
             quadTerm = dij.mSqrtBetaDose{i} * w;
             e        = linTerm + quadTerm.^2;   
 
@@ -83,6 +83,27 @@ else
     matRad_global_d = d;
     
 end
+
+
+% wInitxRay = w;
+% wInitProt = w;
+% wTot      = w;
+% wInitxRay(226:end) = 0;
+% wInitProt(1:225)   = 0;
+% 
+% doseXRay   = reshape(dij.physicalDose{1} * wInitxRay,[dij.dimensions]);
+% doseProton = reshape(dij.physicalDose{1} * wInitProt,[dij.dimensions]);
+% doseTot    = reshape(dij.physicalDose{1} * wTot,[dij.dimensions]);
+% 
+% slice = 80;
+% 
+% 
+% figure,
+% subplot(131),imagesc(doseXRay(:,:,slice)),colorbar
+% subplot(132),imagesc(doseProton(:,:,slice)),colorbar
+% subplot(133),imagesc(doseTot(:,:,slice)),colorbar
+
+
 
 end
 

@@ -10,7 +10,7 @@ function resultGUI = matRad_calcCubes(w,dij,cst,scenNum)
 %   w:       bixel weight vector
 %   dij:     dose influence matrix
 %   cst:     matRad cst struct
-%   scenNum: optional: number of scenario to calculated (default 1)
+%   scenNum: optional: number of scenarios to be calculated (default 1)
 %
 % output
 %   resultGUI: matRad result struct
@@ -33,6 +33,8 @@ function resultGUI = matRad_calcCubes(w,dij,cst,scenNum)
 if nargin < 4
     scenNum = 1;
 end
+
+
 
 resultGUI.w = w;
 

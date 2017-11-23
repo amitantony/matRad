@@ -35,7 +35,7 @@ function stf = matRad_generateStf(ct,cst,pln,visMode)
 if numel(pln)>1 
     fprintf('I see Multiple modalities. I like.\n');
 end
-mod=1; ang=0;
+mod=1; ang=0; % modality counter and combined angles counter.
 % Define steering file like struct. Prellocating for speed.
 stf = struct;
 

@@ -8,7 +8,7 @@ dij.numOfBeams =0;
 dij.numOfVoxels = 0;
 dij.resolution = 0;
 dij.dimensions = 0;
-dij.numOfScenarios = 0;   % dunno wat to do 
+dij.numOfScenarios = 0;   
 dij.numOfRaysPerBeam = [];
 dij.totalNumOfBixels = 0;
 dij.totalNumOfRays = 0;
@@ -35,6 +35,9 @@ if strcmp(pln(i).radiationMode,'photons')
     %dij = matRad_calcPhotonDoseVmc(ct,stf,pln,cst);
 elseif strcmp(pln(i).radiationMode,'protons') || strcmp(pln(i).radiationMode,'carbon')
     dijt = matRad_calcParticleDose(ct,currStf,pln(i),cst);
+    % precondition correction for the Dij for particle doses ( right now
+    % arbitrary) 
+    dijt.physicalDose{1} = dijt.physicalDose{1} .* 10;
 end
 
 % put the two dijs together ?? just like that ? 
@@ -49,6 +52,7 @@ dij.totalNumOfRays = dij.totalNumOfRays + dijt.totalNumOfRays;
 dij.bixelNum = [dij.bixelNum; dijt.bixelNum];
 dij.rayNum = [dij.rayNum; dijt.rayNum];
 dij.beamNum = [dij.beamNum; dijt.beamNum];
+
 dij.physicalDose = {[dij.physicalDose{1} dijt.physicalDose{1}]};
 
 pntr = pntr+pln(i).numOfBeams;

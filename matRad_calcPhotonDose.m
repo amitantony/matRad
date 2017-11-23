@@ -65,7 +65,7 @@ dij.numOfRaysPerBeam   = [stf(:).numOfRays];
 dij.totalNumOfBixels   = sum([stf(:).totalNumOfBixels]);
 dij.totalNumOfRays     = sum(dij.numOfRaysPerBeam);
 
-% check if full dose influence data is required
+% check if full dose influence data is required 
 if calcDoseDirect 
     numOfColumnsDij           = length(stf);
     numOfBixelsContainer = 1;

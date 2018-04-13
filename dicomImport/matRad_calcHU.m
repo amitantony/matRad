@@ -1,6 +1,21 @@
-function sigmaRashi = matRad_sigmaRashi(baseData, radiationMode, rashiEqThickness, rashiDist)
+function ct = matRad_calcHU(ct)
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% additional broadening calculation due to range shifter not provided
+% matRad function to calculate Hounsfield units from a 
+% dicom ct that originally uses intensity values
+%
+% call
+%   ct = matRad_calcHU(ct)
+%
+% input
+%   ct: unprocessed dicom ct data which are stored as intensity values (IV)
+%
+%                      HU = IV * slope + intercept
+%
+% output
+%   ct:                 ct struct with cube with HU
+%
+% References
+%   -
 %
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -17,11 +32,10 @@ function sigmaRashi = matRad_sigmaRashi(baseData, radiationMode, rashiEqThicknes
 %
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-if rashiEqThickness ~= 0 && strcmp(radiationMode, 'protons')
-  error('additional broadening calculation due to range shifter not provided');
+for i = 1:ct.numOfCtScen
+    ct.cubeHU{i} = double(ct.cubeIV{i}) * double(ct.dicomInfo.RescaleSlope) + double(ct.dicomInfo.RescaleIntercept);
 end
 
-sigmaRashi = 0;
+ct = rmfield(ct,'cubeIV');
 
-end % eof
+end

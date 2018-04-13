@@ -1,4 +1,4 @@
-function stf = matRad_computeSSD(stf,ct,mode)
+function stf = matRad_computeSSD(stf,ct,ctScen,param,mode)
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % matRad SSD calculation
 % 
@@ -31,10 +31,20 @@ function stf = matRad_computeSSD(stf,ct,mode)
 %
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% default setting only use first cube
-if nargin < 3
+if nargin < 5
     mode = 'first';
 end
+
+if exist('param','var')
+    if ~isfield(param,'logLevel')
+       param.logLevel = 1;
+    end
+else
+   param.logLevel       = 1;
+end
+
+% booleon to show warnings only once in the console
+boolShowWarning = true;
 
 % set density threshold for SSD computation
 densityThreshold = 0.05;
@@ -42,26 +52,63 @@ densityThreshold = 0.05;
 if strcmp(mode,'first')
     
     for i = 1:size(stf,2)
+        SSD = cell(1,stf(i).numOfRays);
         for j = 1:stf(i).numOfRays
             [alpha,~,rho,~,~] = matRad_siddonRayTracer(stf(i).isoCenter, ...
                                  ct.resolution, ...
                                  stf(i).sourcePoint, ...
                                  stf(i).ray(j).targetPoint, ...
-                                 {ct.cube{1}});
+                                 {ct.cube{ctScen}});
             ixSSD = find(rho{1} > densityThreshold,1,'first');
 
-            if ~isempty(ixSSD) && ixSSD(1) == 1
-                warning('Surface for SSD calculation starts directly in first voxel of CT\n');
+            if boolShowWarning
+                if isempty(ixSSD)
+                    matRad_dispToConsole('ray does not hit patient. Trying to fix afterwards...',param,'warning');
+                    boolShowWarning = false;
+                elseif ixSSD(1) == 1
+                    matRad_dispToConsole('Surface for SSD calculation starts directly in first voxel of CT\n',param,'warning');
+                    boolShowWarning = false;
+                end
             end
-
+            
             % calculate SSD
-            stf(i).ray(j).SSD = double(2 * stf(i).SAD * alpha(ixSSD));
-
+            SSD{j} = double(2 * stf(i).SAD * alpha(ixSSD));
+            stf(i).ray(j).SSD{ctScen} = SSD{j};            
+        end
+        
+        % try to fix SSD by using SSD of closest neighbouring ray
+        SSDnotSet = find(cellfun('isempty',SSD));
+        if ~isempty(SSDnotSet)
+            rayPos_bev = reshape([stf(i).ray(:).rayPos_bev]',[3 stf(i).numOfRays])';
+            for j = SSDnotSet
+                stf(i).ray(j).SSD{ctScen} =  matRad_closestNeighbourSSD(rayPos_bev, SSD, rayPos_bev(j,:));
+            end
         end
     end
-
 else
-    
     error('mode not defined for SSD calculation');
-    
+end
+
+
+% default setting only use first cube
+function bestSSD = matRad_closestNeighbourSSD(rayPos, SSD, currPos)
+    vDistances = sum((rayPos - repmat(currPos,size(rayPos,1),1)).^2,2);
+    [~, vIdx]   = sort(vDistances);
+    for ix = vIdx'
+        bestSSD = SSD{ix};
+        % if SSD has been found, bestSSD is not empty
+        if ~any(isempty(bestSSD))
+            break
+        end
+    end
+    if any(isempty(bestSSD))
+        matRad_dispToConsole('Could not fix SSD calculation.\n',param,'error');
+    end
+end
+
+
+
+
+
+
 end

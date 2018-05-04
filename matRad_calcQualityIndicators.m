@@ -21,7 +21,7 @@ function qi = matRad_calcQualityIndicators(cst,pln,doseCube,refGy,refVol,param)
 %
 % References
 %   van't Riet et. al., IJROBP, 1997 Feb 1;37(3):731-6.
-%   Kataria et. al., J Med Phys. 2012 Oct-Dec; 37(4): 207�213.
+%   Kataria et. al., J Med Phys. 2012 Oct-Dec; 37(4)
 %
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -54,6 +54,7 @@ else
 end
     
 % calculate QIs per VOI
+qi = struct;
 for runVoi = 1:size(cst,1)
     
     indices     = cst{runVoi,4}{1};
@@ -122,15 +123,26 @@ for runVoi = 1:size(cst,1)
             end
         end
         matRad_dispToConsole(voiPrint,param,'info','%s\n')
-    else    
-        matRad_dispToConsole([num2str(cst{runVoi,1}) ' ' cst{runVoi,2} ' - No dose information.\n'],param,'info') 
-        % if VOI contains no voxel indices then fill qi's with NaN's
-        listOfFields = fieldnames(qi);
-        for j = 1:numel(listOfFields)
-            qi(runVoi).(listOfFields{j}) = NaN;
-        end
-    end
     
+    else
+        
+        matRad_dispToConsole([num2str(cst{runVoi,1}) ' ' cst{runVoi,2} ' - No dose information.\n'],param,'info')
+        
+    end
 end
- 
-end    
+
+% assign VOI names which could be corrupted due to empty structures
+listOfFields = fieldnames(qi);
+for i = 1:size(cst,1)
+  indices     = cst{i,4}{1};
+  doseInVoi    = sort(doseCube(indices));
+  if isempty(doseInVoi)
+      for j = 1:numel(listOfFields)
+          qi(i).(listOfFields{j}) = NaN;
+      end
+      qi(i).name = cst{i,2};
+  end
+end
+
+end
+

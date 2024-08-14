@@ -40,13 +40,16 @@ if isfield(dij,'numParticlesPerMU')
     resultGUI.MU = (w.*1e6) ./ dij.numParticlesPerMU;
 end
 
-% get bixel - beam correspondence  
-for i = 1:dij.numOfBeams
-    beamInfo(i).suffix = ['_beam', num2str(i)];
-    beamInfo(i).logIx  = (dij.beamNum == i);
-end
-beamInfo(dij.numOfBeams+1).suffix = '';
-beamInfo(dij.numOfBeams+1).logIx  = true(size(resultGUI.w,1),1);
+% % get bixel - beam correspondence  
+% for i = 1:dij.numOfBeams
+%     beamInfo(i).suffix = ['_beam', num2str(i)];
+%     beamInfo(i).logIx  = (dij.beamNum == i);
+% end
+% beamInfo(dij.numOfBeams+1).suffix = '';
+% beamInfo(dij.numOfBeams+1).logIx  = true(size(resultGUI.w,1),1);
+
+beamInfo(1).suffix = '';
+beamInfo(1).logIx  = true(size(resultGUI.w,1),1);
 
 
 %% Physical Dose

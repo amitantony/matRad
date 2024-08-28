@@ -338,6 +338,23 @@ optiProb.quantityOpt = pln.bioParam.quantityOpt;
 if isfield(pln,'propOpt') && isfield(pln.propOpt,'useLogSumExpForRobOpt')
     optiProb.useLogSumExpForRobOpt = pln.propOpt.useLogSumExpForRobOpt;
 end
+% LET Back projections 
+rowCst = size(cst);
+for i = 1 : rowCst(1,1)
+    num = size(cst{i,6});
+    for j = 1 : num(1,2)
+        if isa(cst{i,6}{j},'DirtyDoseObjectives.matRad_DirtyDoseObjective')
+            optiProb.dirtyDoseBP = matRad_DirtyDoseProjection;
+        end
+        if isa(cst{i,6}{j},'mLETDoseObjectives.matRad_mLETDoseObjective')
+            optiProb.mLETDoseBP = matRad_mLETDoseProjection;
+        end
+        if isa(cst{i,6}{j},'LETdObjectives.matRad_LETdObjective')
+            optiProb.LETdBP = matRad_LETdProjection;
+        end
+    end
+end
+
 
 if dij.precon
     dij = matRad_mixModPreconditioner(dij);

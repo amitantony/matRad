@@ -58,7 +58,7 @@ pln(1).propDoseCalc.doseGrid.resolution.x = 3; % [mm]
 pln(1).propDoseCalc.doseGrid.resolution.y = 3; % [mm]
 pln(1).propDoseCalc.doseGrid.resolution.z = 3; % [mm]
 % pln(1).propDoseCalc.doseGrid.resolution = ct.resolution;
-quantityOpt  = 'physicalDose';     % options: physicalDose, effect, RBExD
+quantityOpt  = 'RBExD';     % options: physicalDose, effect, RBExD
 %=======================================> Model check error in bioModel
 modelName    = 'constRBE';             % none: for photons, protons, carbon            % constRBE: constant RBE for photons and protons 
                                    % MCN: McNamara-variable RBE model for protons  % WED: Wedenberg-variable RBE model for protons 
@@ -117,7 +117,7 @@ pln(2).multScen = matRad_multScen(ct,scenGenType);
 % placing alpha/beta ratios in cst{:,6},
 % different alpha beta ration for each obj of a structure  
 sparecst = 0;
-
+%%
 cst = matRad_prepCst(cst, sparecst);
 
 % Plan Wrapper
@@ -133,7 +133,7 @@ dij = matRad_calcmLETDose(dij,pln);
 dij.precon = 0;
 
 [result_Under,optimizer_Under] = matRad_fluenceOptimizationJO(dij,cst,plnJO);
-
+%%
 physDose_U100 = result_U100{1,1}.physicalDose * 5 + result_U100{1,2}.physicalDose * 25;
 RBExD_U100 = result_U100{1,1}.physicalDose * 1.1 * 5 + result_U100{1,2}.physicalDose * 1.1 * 25;
 dirtyDose_U100 = result_U100{1,1}.dirtyDose * 5 + result_U100{1,2}.dirtyDose * 25;

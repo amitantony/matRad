@@ -1,48 +1,49 @@
 %% My processing script 
 matRad_rc;
-clear
+% clear
 matRad_cfg = MatRad_Config.instance();
 matRad_cfg.propOpt.defaultMaxIter = 500000;
 matRad_cfg.propOpt.defaultAccChangeTol = 1e-06;
-load TG119.mat
-%%
-%% add core
-cube = zeros(ct.cubeDim);
-cube(cst{1,4}{1}) = 1;
-vResolution = ct.resolution;
-vMargin = [];
-vMargin.x = 5;
-vMargin.y = 5;
-vMargin.z = 5;
-mVOIEnlarged = matRad_addMargin(cube,cst,vResolution,vMargin,1);
-
-cst{4,1}    = 3;
-cst{4,2}    = 'Core_Big';
-cst{4,3}    = 'OAR';
-cst{4,4}{1} = find(mVOIEnlarged);
-cst{4,5}    = cst{1,5};
-
-%% add Target margin
-cube = zeros(ct.cubeDim);
-cube(cst{2,4}{1}) = 1;
-vResolution = ct.resolution;
-vMargin = [];
-vMargin.x = 5;
-vMargin.y = 5;
-vMargin.z = 5;
-mVOIEnlarged = matRad_addMargin(cube,cst,vResolution,vMargin,1);
-
-cst{5,1}    = 3;
-cst{5,2}    = 'Target_Conform';
-cst{5,3}    = 'OAR';
-cst{5,4}{1} = find(mVOIEnlarged);
-cst{5,5}    = cst{1,5};
-
-cst{2,5}.alphaX  = 0.5;
-cst{2,6}{1} = struct(DoseObjectives.matRad_SquaredDeviation(800,60));
-cst{5,6}{1} = struct(DoseObjectives.matRad_SquaredOverdosing(100,45)); 
-cst{4,6}{1} = struct(DoseObjectives.matRad_SquaredOverdosing(100,40)); 
-cst{3,6}{2} = struct(DoseObjectives.matRad_MeanDose(100,0));
+% load TG119.mat
+ %%
+% %% add core
+% cube = zeros(ct.cubeDim);
+% cube(cst{1,4}{1}) = 1;
+% vResolution = ct.resolution;
+% vMargin = [];
+% vMargin.x = 5;
+% vMargin.y = 5;
+% vMargin.z = 5;
+% mVOIEnlarged = matRad_addMargin(cube,cst,vResolution,vMargin,1);
+% 
+% cst{4,1}    = 3;
+% cst{4,2}    = 'Core_Big';
+% cst{4,3}    = 'OAR';
+% cst{4,4}{1} = find(mVOIEnlarged);
+% cst{4,5}    = cst{1,5};
+% 
+% %% add Target margin
+% cube = zeros(ct.cubeDim);
+% cube(cst{2,4}{1}) = 1;
+% vResolution = ct.resolution;
+% vMargin = [];
+% vMargin.x = 5;
+% vMargin.y = 5;
+% vMargin.z = 5;
+% mVOIEnlarged = matRad_addMargin(cube,cst,vResolution,vMargin,1);
+% 
+% cst{5,1}    = 3;
+% cst{5,2}    = 'Target_Conform';
+% cst{5,3}    = 'OAR';
+% cst{5,4}{1} = find(mVOIEnlarged);
+% cst{5,5}    = cst{1,5};
+% 
+% cst{2,5}.alphaX  = 0.5;
+% cst{2,6}{1} = struct(DoseObjectives.matRad_SquaredDeviation(800,60));
+%
+cst{3,6}{2} = struct(DoseObjectives.matRad_SquaredOverdosing(100,30)); 
+% cst{4,6}{1} = struct(DoseObjectives.matRad_SquaredOverdosing(100,40)); 
+% cst{3,6}{2} = struct(DoseObjectives.matRad_MeanDose(100,0));
 %%
 
 % meta information for treatment plan (1) 
@@ -52,7 +53,7 @@ pln(1).machine         = 'Generic';
 
 % beam geometry settings
 pln(1).propStf.bixelWidth      = 5; % [mm] / also corresponds to lateral spot spacing for particles
-pln(1).propStf.gantryAngles    = [-45 0 45]; % [?] ;
+pln(1).propStf.gantryAngles    = [250 290]; % [?] ;
 %pln(1).propStf.gantryAngles    = [90];
 pln(1).propStf.couchAngles     = zeros(numel(pln(1).propStf.gantryAngles),1); % [?] ; 
 pln(1).propStf.numOfBeams      = numel(pln(1).propStf.gantryAngles);
@@ -71,7 +72,7 @@ pln(1).propDoseCalc.doseGrid.resolution.x = 5; % [mm]
 pln(1).propDoseCalc.doseGrid.resolution.y = 5; % [mm]
 pln(1).propDoseCalc.doseGrid.resolution.z = 5; % [mm]
 % pln(1).propDoseCalc.doseGrid.resolution = ct.resolution;
-quantityOpt  = 'RBExD';     % options: physicalDose, effect, RBExD
+quantityOpt  = 'effect';     % options: physicalDose, effect, RBExD
 %=======================================> Model check error in bioModel
 modelName    = 'MCN';             % none: for photons, protons, carbon            % constRBE: constant RBE for photons and protons 
                                    % MCN: McNamara-variable RBE model for protons  % WED: Wedenberg-variable RBE model for protons 
@@ -112,7 +113,7 @@ pln(2).propDoseCalc.doseGrid.resolution.y = 5; % [mm]
 pln(2).propDoseCalc.doseGrid.resolution.z = 5; % [mm]
 % pln(2).propDoseCalc.doseGrid.resolution = ct.resolution;
 
-quantityOpt  = ['RBExD'];     % options: physicalDose, effect, RBExD
+quantityOpt  = ['effect'];     % options: physicalDose, effect, RBExD
 modelName    = 'none';             % none: for photons, protons, carbon            % constRBE: constant RBE for photons and protons 
                                    % MCN: McNamara-variable RBE model for protons  % WED: Wedenberg-variable RBE model for protons 
                                    % LEM: Local Effect Model for carbon ions
@@ -138,7 +139,7 @@ plnJO = matRad_plnWrapper(pln);
 % Stf Wrapper
 stf = matRad_stfWrapper(ct,cst,plnJO);
 
-% Dij Calculation
+%% Dij Calculation
 dij = matRad_calcCombiDose(ct,stf,plnJO,cst,false);
 % Dirty Dose Calculation
 dij = matRad_calcDirtyDose(2,dij,pln);
@@ -149,8 +150,8 @@ dij = matRad_calcmLETDose(dij,pln);
 dij.precon = 1;
 % dij.wInit = [result_pre{1}.w; result_pre{2}.w];
 [result_pre,optimizer_U300_preCon] = matRad_fluenceOptimizationJO(dij,cst,plnJO);
-%% Visualization
-slice = 59;
+% Visualization
+slice = 65;
 
 photon_plan = result_pre{2};
 proton_plan = result_pre{1};
@@ -178,14 +179,27 @@ end
 
 %% DVH
 
-%% ficures slice 
+%% plotting
+color = ['b', 'm', 'g' , 'r'];
+figure
+subplot(3,1,1)
+structure = [2 3 4];
+for i = [1 2 3]
+    plot(dvh_Pwithout_p(structure(i)).doseGrid,dvh_Pwithout_p(structure(i)).volumePoints,'Color',color(i),'LineStyle','-','LineWidth',2)
+    hold on
+end
 
 %% Visualization
-slice = 59;
-
-photon_plan = result_pre{2};
-proton_plan = result_pre{1};
+slice = 65;
+ResultCell = result_DD_Full;
+photon_plan = ResultCell{2};
+proton_plan = ResultCell{1};
+quantityOpt = 'effect';
 totalPlan = pln(1).numOfFractions.*proton_plan.(quantityOpt) + pln(2).numOfFractions.*photon_plan.(quantityOpt);
+% matRad_calcQualityIndicators(cst,pln,totalPlan)
+%%
+
+
 
 f = figure;
 subplot(1,3,1);
@@ -202,5 +216,66 @@ subplot(1,3,3);
     title('Total Plan');
 
 
-%% profiles ? 
+%% %% ficures slice 
+
+plane = 3;
+slice = 65;
+cube = proton_plan.(quantityOpt);
+doseWindow = [0 max(cube(:))];
+isoStep = [0:0.1*doseWindow(2):doseWindow(2)];
+figure,
+subplot(1,3,1)
+matRad_plotSliceWrapper(gca,ct,cst,1,cube,plane,slice,[],[],colorcube,[],doseWindow,isoStep);
+title(['Referenz Proton ' quantityOpt])
+zoom(1.5)
+subplot(1,3,2)
+cube = photon_plan.(quantityOpt);
+doseWindow = [0 max(cube(:))];
+isoStep = [0:0.1*doseWindow(2):doseWindow(2)];
+matRad_plotSliceWrapper(gca,ct,cst,1,photon_plan.(quantityOpt),plane,slice,[],[],colorcube,[],doseWindow,isoStep);
+title(['Referenz Photon ' quantityOpt])
+zoom(1.5)
+subplot(1,3,3)
+cube = totalPlan;
+doseWindow = [0 max(cube(:))];
+isoStep = [0:0.1*doseWindow(2):doseWindow(2)];
+matRad_plotSliceWrapper(gca,ct,cst,1,cube,plane,slice,[],[],colorcube,[],doseWindow,isoStep);
+title('Referenz Proton BED')
+zoom(1.5)
+figure
+cube = proton_plan.dirtyDose;
+doseWindow = [0 max(cube(:))];
+isoStep = [0:0.1*doseWindow(2):doseWindow(2)];
+matRad_plotSliceWrapper(gca,ct,cst,1,cube,plane,slice,[],[],colorcube,[],doseWindow,isoStep);
+title('Referenz Proton BED')
+zoom(1.5)
+
+
+
+%% calc DVH for the current cube 
+resultDVH  = matRad_calcDVH(cst,totalPlan,'cum');
+% LET_DVH = resultDVH;
+figure,
+vois = [3,4,5,12,13,14,15];
+for i  = vois
+    plot(resultDVH(i).doseGrid,resultDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', '-');
+    hold on
+    plot(LET_DVH(i).doseGrid,LET_DVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', ':');
+end 
+hold on 
+c =1;
+
+%custom legend
+for i = vois
+    leg{c} = plot(nan,'Color',cst{i,5}.visibleColor,'LineWidth',1.2);
+    hold on 
+    names{c} = cst{i,2}; 
+    c = c+1;
+
+end
+
+legend ([leg{:}],names ) 
+
+
+
 

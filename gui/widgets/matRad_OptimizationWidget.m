@@ -264,9 +264,9 @@ classdef matRad_OptimizationWidget < matRad_Widget
                         obj = cst{i,6}{j};
                         
                         %Convert to class if not
-                        if ~isa(obj,'matRad_DoseOptimizationFunction')
+                        if ~isa(obj,'matRad_DoseOptimizationFunction') 
                             try
-                                obj = matRad_DoseOptimizationFunction.createInstanceFromStruct(obj);
+                                obj = matRad_DoseOptimizationFunction.createInstanceFromStruct(obj); % needs this function for all objectives
                             catch ME
                                 this.showWarning('Objective/Constraint not valid!\n%s',ME.message)
                                 continue;

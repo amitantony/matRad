@@ -43,7 +43,7 @@ matRad_cfg.propOpt.defaultAccChangeTol = 1e-06;
 %
 cst{3,6}{2} = struct(DoseObjectives.matRad_SquaredOverdosing(100,30)); 
 % cst{4,6}{1} = struct(DoseObjectives.matRad_SquaredOverdosing(100,40)); 
-% cst{3,6}{2} = struct(DoseObjectives.matRad_MeanDose(100,0));
+ cst{3,6}{2} = struct(DoseObjectives.matRad_MeanDose(100,0));
 %%
 
 % meta information for treatment plan (1) 
@@ -191,80 +191,79 @@ end
 
 %% Visualization
 slice = 65;
-ResultCell = result_DD_Full;
+ResultCell = onlyProtonTotal;
 photon_plan = ResultCell{2};
 proton_plan = ResultCell{1};
 quantityOpt = 'effect';
 totalPlan = pln(1).numOfFractions.*proton_plan.(quantityOpt) + pln(2).numOfFractions.*photon_plan.(quantityOpt);
 % matRad_calcQualityIndicators(cst,pln,totalPlan)
-%%
-
-
-
-f = figure;
-subplot(1,3,1);
-    imagesc(proton_plan.(quantityOpt)(:,:,slice));
-    matRad_plotVoiContourSlice(gca(f), cst,ct, 1, 1,3,slice);
-    title('Proton Plan');
-subplot(1,3,2);
-    imagesc(photon_plan.(quantityOpt)(:,:,slice));
-    matRad_plotVoiContourSlice(gca(f), cst,ct, 1, 1,3,slice);
-    title('Photon Plan');
-subplot(1,3,3);
-    imagesc(totalPlan(:,:,slice));
-    matRad_plotVoiContourSlice(gca(f), cst,ct, 1, 1,3,slice);
-    title('Total Plan');
 
 
 %% %% ficures slice 
 
 plane = 3;
 slice = 65;
-cube = proton_plan.(quantityOpt);
+cube = proton_plan.RBExD;
 doseWindow = [0 max(cube(:))];
 isoStep = [0:0.1*doseWindow(2):doseWindow(2)];
 figure,
-subplot(1,3,1)
+% subplot(1,3,1)
 matRad_plotSliceWrapper(gca,ct,cst,1,cube,plane,slice,[],[],colorcube,[],doseWindow,isoStep);
-title(['Referenz Proton ' quantityOpt])
+% title(['Referenz Proton ' ])
 zoom(1.5)
-subplot(1,3,2)
-cube = photon_plan.(quantityOpt);
-doseWindow = [0 max(cube(:))];
-isoStep = [0:0.1*doseWindow(2):doseWindow(2)];
-matRad_plotSliceWrapper(gca,ct,cst,1,photon_plan.(quantityOpt),plane,slice,[],[],colorcube,[],doseWindow,isoStep);
-title(['Referenz Photon ' quantityOpt])
-zoom(1.5)
-subplot(1,3,3)
-cube = totalPlan;
-doseWindow = [0 max(cube(:))];
-isoStep = [0:0.1*doseWindow(2):doseWindow(2)];
-matRad_plotSliceWrapper(gca,ct,cst,1,cube,plane,slice,[],[],colorcube,[],doseWindow,isoStep);
-title('Referenz Proton BED')
-zoom(1.5)
+% subplot(1,3,2)
 figure
-cube = proton_plan.dirtyDose;
+cube = photon_plan.RBExD;
+doseWindow = [0 2.3];
+isoStep = [0:0.1*doseWindow(2):doseWindow(2)];
+matRad_plotSliceWrapper(gca,ct,cst,1,cube,plane,slice,[],[],colorcube,[],doseWindow,isoStep);
+% title(['Referenz Photon ' quantityOpt])
+zoom(1.5)
+% subplot(1,3,3)
+figure;
+cube = totalPlan./0.1;
 doseWindow = [0 max(cube(:))];
 isoStep = [0:0.1*doseWindow(2):doseWindow(2)];
 matRad_plotSliceWrapper(gca,ct,cst,1,cube,plane,slice,[],[],colorcube,[],doseWindow,isoStep);
-title('Referenz Proton BED')
+% title('Referenz Proton BED')
+zoom(1.5)
+%%
+figure
+cube = onlyProton{ 1}.RBExD;
+doseWindow = [0 6.4];
+isoStep = [0:0.1*doseWindow(2):doseWindow(2)];
+matRad_plotSliceWrapper(gca,ct,cst,1,cube,plane,slice,[],[],colorcube,[],doseWindow,isoStep);
+% title('Proton dirty dose dose (threshold = 2 keV \mum^{-1})')
 zoom(1.5)
 
 
 
 %% calc DVH for the current cube 
-resultDVH  = matRad_calcDVH(cst,totalPlan,'cum');
+DDoverTotal= pln(1).numOfFractions.*result_DD_over{1,1}.effect + pln(2).numOfFractions.*result_DD_over{1,2}.effect;
+LEToverTotal = pln(1).numOfFractions.*result_LET_over{1,1}.effect + pln(2).numOfFractions.*result_LET_over{1,2}.effect;
+onlyProtonTotal = effect(30,onlyProton{1,1}.RBExD,0.1,0.05) ./0.1 ;
+refJointTotal = pln(1).numOfFractions.*RefJoint{1,1}.effect + pln(2).numOfFractions.*RefJoint{1,2}.effect; 
+% resultDVH  = matRad_calcDVH(cst,totalPlan,'cum');
 % LET_DVH = resultDVH;
+%% total BED DVH
+DDtotalDVH  = matRad_calcDVH(cst,DDoverTotal./0.1,'cum');
+LETtotalDVH = matRad_calcDVH(cst,LEToverTotal./0.1,'cum');
+onlyProtonDVH = matRad_calcDVH(cst,onlyProtonTotal,'cum');
+refJointDVH = matRad_calcDVH(cst,refJointTotal./0.1,'cum');
+
 figure,
-vois = [3,4,5,12,13,14,15];
+vois = [3,12,13,14,15];
 for i  = vois
-    plot(resultDVH(i).doseGrid,resultDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', '-');
+    plot(DDtotalDVH(i).doseGrid,DDtotalDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', '-.');
     hold on
-    plot(LET_DVH(i).doseGrid,LET_DVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', ':');
+    plot(LETtotalDVH(i).doseGrid,LETtotalDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', ':');
+    plot(onlyProtonDVH(i).doseGrid,onlyProtonDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', '-');
+    plot(refJointDVH(i).doseGrid,refJointDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', '--');
 end 
 hold on 
 c =1;
-
+leg = {};
+names = {};
 %custom legend
 for i = vois
     leg{c} = plot(nan,'Color',cst{i,5}.visibleColor,'LineWidth',1.2);
@@ -273,9 +272,116 @@ for i = vois
     c = c+1;
 
 end
-
+leg{c} = plot(NaN, 'Color',[0,0,0],'LineStyle','-.','LineWidth',1.2);
+names{c} = 'Joint DD';
+c = c+1;
+leg{c} = plot(NaN, 'Color',[0,0,0],'LineStyle',':','LineWidth',1.2);
+names{c} = 'Joint LET';
+c = c+1;
+leg{c} = plot(NaN, 'Color',[0,0,0],'LineStyle','-','LineWidth',1.2);
+names{c} = 'only Proton';
+c = c+1;
+leg{c} = plot(NaN, 'Color',[0,0,0],'LineStyle','--','LineWidth',1.2);
+names{c} = 'Ref. Joint';
+c = c+1;
+xlabel('BED [Gy]')
+ylabel('Volume [%]')
 legend ([leg{:}],names ) 
+set(gca,'FontSize',14)
+grid on
 
+%% DVH Dirty Dose 
 
+%% Dirty Dose DVH
+DDtotalDVH  = matRad_calcDVH(cst,result_DD_over{1,1}.dirtyDose,'cum');
+LETtotalDVH = matRad_calcDVH(cst,result_LET_over{1,1}.dirtyDose,'cum');
+onlyProtonDVH = matRad_calcDVH(cst,onlyProton{1}.dirtyDose,'cum');
+refJointDVH = matRad_calcDVH(cst,RefJoint{1,1}.dirtyDose,'cum');
 
+fig = figure;
+
+vois = [3];
+for i  = vois
+    plot(DDtotalDVH(i).doseGrid,DDtotalDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', '-.');
+    hold on
+    plot(LETtotalDVH(i).doseGrid,LETtotalDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', ':');
+    plot(onlyProtonDVH(i).doseGrid,onlyProtonDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', '-');
+    plot(refJointDVH(i).doseGrid,refJointDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', '--');
+end 
+hold on 
+c =1;
+leg = {};
+names = {};
+%custom legend
+for i = vois
+    leg{c} = plot(nan,'Color',cst{i,5}.visibleColor,'LineWidth',1.2);
+    hold on 
+    names{c} = cst{i,2}; 
+    c = c+1;
+
+end
+leg{c} = plot(NaN, 'Color',[0,0,0],'LineStyle','-.','LineWidth',1.2);
+names{c} = 'Joint DD';
+c = c+1;
+leg{c} = plot(NaN, 'Color',[0,0,0],'LineStyle',':','LineWidth',1.2);
+names{c} = 'Joint LET';
+c = c+1;
+leg{c} = plot(NaN, 'Color',[0,0,0],'LineStyle','-','LineWidth',1.2);
+names{c} = 'only Proton';
+c = c+1;
+leg{c} = plot(NaN, 'Color',[0,0,0],'LineStyle','--','LineWidth',1.2);
+names{c} = 'Ref. Joint';
+c = c+1;
+axis([0,3,0,100])
+legend ([leg{:}],names ) 
+xlabel('Fraction Dirty Dose [Gy]')
+ylabel('Volume [%]')
+set(gca,'FontSize',14)
+grid on
+
+%%
+%% Dirty Dose DVH
+DDtotalDVH  = matRad_calcDVH(cst,result_DD_over{1,1}.mLETDose,'cum');
+LETtotalDVH = matRad_calcDVH(cst,result_LET_over{1,1}.mLETDose,'cum');
+onlyProtonDVH = matRad_calcDVH(cst,onlyProton{1}.mLETDose,'cum');
+refJointDVH = matRad_calcDVH(cst,RefJoint{1,1}.mLETDose,'cum');
+
+figure,
+vois = [3];
+for i  = vois
+    plot(DDtotalDVH(i).doseGrid,DDtotalDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', '-.');
+    hold on
+    plot(LETtotalDVH(i).doseGrid,LETtotalDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', ':');
+    plot(onlyProtonDVH(i).doseGrid,onlyProtonDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', '-');
+    plot(refJointDVH(i).doseGrid,refJointDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', '--');
+end 
+hold on 
+c =1;
+leg = {};
+names = {};
+%custom legend
+for i = vois
+    leg{c} = plot(nan,'Color',cst{i,5}.visibleColor,'LineWidth',1.2);
+    hold on 
+    names{c} = cst{i,2}; 
+    c = c+1;
+
+end
+leg{c} = plot(NaN, 'Color',[0,0,0],'LineStyle','-.','LineWidth',1.2);
+names{c} = 'Joint DD';
+c = c+1;
+leg{c} = plot(NaN, 'Color',[0,0,0],'LineStyle',':','LineWidth',1.2);
+names{c} = 'Joint LET';
+c = c+1;
+leg{c} = plot(NaN, 'Color',[0,0,0],'LineStyle','-','LineWidth',1.2);
+names{c} = 'only Proton';
+c = c+1;
+leg{c} = plot(NaN, 'Color',[0,0,0],'LineStyle','--','LineWidth',1.2);
+names{c} = 'Ref. Joint';
+c = c+1;
+% axis([0,3,0,100])
+legend ([leg{:}],names ) 
+xlabel('LET')
+ylabel('Volume [%]')
+grid on
 

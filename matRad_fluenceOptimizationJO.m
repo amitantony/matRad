@@ -356,8 +356,9 @@ for i = 1 : rowCst(1,1)
 end
 
 
-if dij.precon
+if isfield (dij,'precon') && dij.precon
     dij = matRad_mixModPreconditioner(dij);
+    
 end
 %Get Bounds
 

@@ -142,7 +142,7 @@ axis(axesHandle,'tight');
 set(axesHandle,'xtick',[],'ytick',[]);
 colormap(axesHandle,doseColorMap);
 
-matRad_plotAxisLabels(axesHandle,ct,plane,slice,[])
+% matRad_plotAxisLabels(axesHandle,ct,plane,slice,[])
 
 % set axis ratio
 

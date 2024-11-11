@@ -42,6 +42,8 @@ matRad_cfg.propOpt.defaultAccChangeTol = 1e-06;
 % cst{2,6}{1} = struct(DoseObjectives.matRad_SquaredDeviation(800,60));
 %
 cst{3,6}{2} = struct(DoseObjectives.matRad_SquaredOverdosing(100,30)); 
+cst{13,6}{2} = struct(mLETDoseObjectives.matRad_SquaredUnderdosingmLETDose(100,40)); 
+cst{13,6}{2} = struct(DirtyDoseObjectives.matRad_SquaredUnderdosingDirtyDose(100,20)); 
 % cst{4,6}{1} = struct(DoseObjectives.matRad_SquaredOverdosing(100,40)); 
  cst{3,6}{2} = struct(DoseObjectives.matRad_MeanDose(100,0));
 %%
@@ -191,7 +193,7 @@ end
 
 %% Visualization
 slice = 65;
-ResultCell = onlyProtonTotal;
+ResultCell = RefJoint;
 photon_plan = ResultCell{2};
 proton_plan = ResultCell{1};
 quantityOpt = 'effect';
@@ -229,8 +231,8 @@ matRad_plotSliceWrapper(gca,ct,cst,1,cube,plane,slice,[],[],colorcube,[],doseWin
 zoom(1.5)
 %%
 figure
-cube = onlyProton{ 1}.RBExD;
-doseWindow = [0 6.4];
+cube = onlyProton{1}.dirtyDose;
+doseWindow = [0 max(cube(:))];
 isoStep = [0:0.1*doseWindow(2):doseWindow(2)];
 matRad_plotSliceWrapper(gca,ct,cst,1,cube,plane,slice,[],[],colorcube,[],doseWindow,isoStep);
 % title('Proton dirty dose dose (threshold = 2 keV \mum^{-1})')

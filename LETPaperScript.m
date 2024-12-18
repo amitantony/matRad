@@ -5,6 +5,8 @@ matRad_cfg = MatRad_Config.instance();
 matRad_cfg.propOpt.defaultMaxIter = 500000;
 matRad_cfg.propOpt.defaultAccChangeTol = 1e-06;
 % load TG119.mat
+load('D:\postDoc\LET_Paper\FinalResult.mat')
+load('D:\postDoc\LET_Paper\OnlyProton.mat')
  %%
 % %% add core
 % cube = zeros(ct.cubeDim);
@@ -42,8 +44,8 @@ matRad_cfg.propOpt.defaultAccChangeTol = 1e-06;
 % cst{2,6}{1} = struct(DoseObjectives.matRad_SquaredDeviation(800,60));
 %
 cst{3,6}{2} = struct(DoseObjectives.matRad_SquaredOverdosing(100,30)); 
-cst{13,6}{2} = struct(mLETDoseObjectives.matRad_SquaredUnderdosingmLETDose(100,40)); 
-cst{13,6}{2} = struct(DirtyDoseObjectives.matRad_SquaredUnderdosingDirtyDose(100,20)); 
+cst{13,6}{2} = struct(mLETDoseObjectives.matRad_SquaredUnderdosingmLETDose(100,90)); 
+cst{13,6}{2} = struct(DirtyDoseObjectives.matRad_SquaredUnderdosingDirtyDose(100,15)); 
 % cst{4,6}{1} = struct(DoseObjectives.matRad_SquaredOverdosing(100,40)); 
  cst{3,6}{2} = struct(DoseObjectives.matRad_MeanDose(100,0));
 %%
@@ -55,7 +57,7 @@ pln(1).machine         = 'Generic';
 
 % beam geometry settings
 pln(1).propStf.bixelWidth      = 5; % [mm] / also corresponds to lateral spot spacing for particles
-pln(1).propStf.gantryAngles    = [250 290]; % [?] ;
+pln(1).propStf.gantryAngles    = [270];%[250 290]; % [?] ;
 %pln(1).propStf.gantryAngles    = [90];
 pln(1).propStf.couchAngles     = zeros(numel(pln(1).propStf.gantryAngles),1); % [?] ; 
 pln(1).propStf.numOfBeams      = numel(pln(1).propStf.gantryAngles);
@@ -74,9 +76,9 @@ pln(1).propDoseCalc.doseGrid.resolution.x = 5; % [mm]
 pln(1).propDoseCalc.doseGrid.resolution.y = 5; % [mm]
 pln(1).propDoseCalc.doseGrid.resolution.z = 5; % [mm]
 % pln(1).propDoseCalc.doseGrid.resolution = ct.resolution;
-quantityOpt  = 'effect';     % options: physicalDose, effect, RBExD
+quantityOpt  = 'RBExD';     % options: physicalDose, effect, RBExD
 %=======================================> Model check error in bioModel
-modelName    = 'MCN';             % none: for photons, protons, carbon            % constRBE: constant RBE for photons and protons 
+modelName    = 'constRBE';             % none: for photons, protons, carbon            % constRBE: constant RBE for photons and protons 
                                    % MCN: McNamara-variable RBE model for protons  % WED: Wedenberg-variable RBE model for protons 
                                    % LEM: Local Effect Model for carbon ions
 
@@ -141,7 +143,7 @@ plnJO = matRad_plnWrapper(pln);
 % Stf Wrapper
 stf = matRad_stfWrapper(ct,cst,plnJO);
 
-%% Dij Calculation
+% Dij Calculation
 dij = matRad_calcCombiDose(ct,stf,plnJO,cst,false);
 % Dirty Dose Calculation
 dij = matRad_calcDirtyDose(2,dij,pln);
@@ -193,7 +195,7 @@ end
 
 %% Visualization
 slice = 65;
-ResultCell = RefJoint;
+ResultCell = resultLET_Target;
 photon_plan = ResultCell{2};
 proton_plan = ResultCell{1};
 quantityOpt = 'effect';
@@ -206,7 +208,7 @@ totalPlan = pln(1).numOfFractions.*proton_plan.(quantityOpt) + pln(2).numOfFract
 plane = 3;
 slice = 65;
 cube = proton_plan.RBExD;
-doseWindow = [0 max(cube(:))];
+doseWindow = [0 6.8];%[0 max(cube(:))];
 isoStep = [0:0.1*doseWindow(2):doseWindow(2)];
 figure,
 % subplot(1,3,1)
@@ -224,15 +226,15 @@ zoom(1.5)
 % subplot(1,3,3)
 figure;
 cube = totalPlan./0.1;
-doseWindow = [0 max(cube(:))];
+doseWindow = [0 155];%[0 max(cube(:))];
 isoStep = [0:0.1*doseWindow(2):doseWindow(2)];
 matRad_plotSliceWrapper(gca,ct,cst,1,cube,plane,slice,[],[],colorcube,[],doseWindow,isoStep);
 % title('Referenz Proton BED')
 zoom(1.5)
 %%
 figure
-cube = onlyProton{1}.dirtyDose;
-doseWindow = [0 max(cube(:))];
+cube = proton_plan.dirtyDose;
+doseWindow = [0 4.8 ];%[0 max(cube(:))];
 isoStep = [0:0.1*doseWindow(2):doseWindow(2)];
 matRad_plotSliceWrapper(gca,ct,cst,1,cube,plane,slice,[],[],colorcube,[],doseWindow,isoStep);
 % title('Proton dirty dose dose (threshold = 2 keV \mum^{-1})')
@@ -241,17 +243,23 @@ zoom(1.5)
 
 
 %% calc DVH for the current cube 
-DDoverTotal= pln(1).numOfFractions.*result_DD_over{1,1}.effect + pln(2).numOfFractions.*result_DD_over{1,2}.effect;
-LEToverTotal = pln(1).numOfFractions.*result_LET_over{1,1}.effect + pln(2).numOfFractions.*result_LET_over{1,2}.effect;
-onlyProtonTotal = effect(30,onlyProton{1,1}.RBExD,0.1,0.05) ./0.1 ;
-refJointTotal = pln(1).numOfFractions.*RefJoint{1,1}.effect + pln(2).numOfFractions.*RefJoint{1,2}.effect; 
+DDoverTotal= (pln(1).numOfFractions.*result_DD_over{1,1}.effect + pln(2).numOfFractions.*result_DD_over{1,2}.effect)./0.1;
+LEToverTotal = (pln(1).numOfFractions.*result_LET_over{1,1}.effect + pln(2).numOfFractions.*result_LET_over{1,2}.effect)./0.1;
+
+onlyProtonTotal = effect(30,onlyProton{1,1}.RBExD,0.1,0.05)./0.1  ;
+refJointTotal = (pln(1).numOfFractions.*RefJoint{1,1}.effect + pln(2).numOfFractions.*RefJoint{1,2}.effect)./0.1; 
 % resultDVH  = matRad_calcDVH(cst,totalPlan,'cum');
 % LET_DVH = resultDVH;
+%%
+cst{3,5}.visibleColor = [ 0 0.7 0];
+cst{12,5}.visibleColor = [ 0.2 0.45 1];
+
+
 %% total BED DVH
-DDtotalDVH  = matRad_calcDVH(cst,DDoverTotal./0.1,'cum');
-LETtotalDVH = matRad_calcDVH(cst,LEToverTotal./0.1,'cum');
+DDtotalDVH  = matRad_calcDVH(cst,DDoverTotal,'cum');
+LETtotalDVH = matRad_calcDVH(cst,LEToverTotal,'cum');
 onlyProtonDVH = matRad_calcDVH(cst,onlyProtonTotal,'cum');
-refJointDVH = matRad_calcDVH(cst,refJointTotal./0.1,'cum');
+refJointDVH = matRad_calcDVH(cst,refJointTotal,'cum');
 
 figure,
 vois = [3,12,13,14,15];
@@ -295,10 +303,15 @@ grid on
 %% DVH Dirty Dose 
 
 %% Dirty Dose DVH
-DDtotalDVH  = matRad_calcDVH(cst,result_DD_over{1,1}.dirtyDose,'cum');
-LETtotalDVH = matRad_calcDVH(cst,result_LET_over{1,1}.dirtyDose,'cum');
-onlyProtonDVH = matRad_calcDVH(cst,onlyProton{1}.dirtyDose,'cum');
-refJointDVH = matRad_calcDVH(cst,RefJoint{1,1}.dirtyDose,'cum');
+% DDtotalDVH  = matRad_calcDVH(cst,result_DD_over{1,1}.dirtyDose,'cum');
+% LETtotalDVH = matRad_calcDVH(cst,result_LET_over{1,1}.dirtyDose,'cum');
+% onlyProtonDVH = matRad_calcDVH(cst,onlyProton{1}.dirtyDose,'cum');
+% refJointDVH = matRad_calcDVH(cst,RefJoint{1,1}.dirtyDose,'cum');
+% 
+DDtotalDVH  = matRad_calcDVH(cst,DD_DBED,'cum');
+LETtotalDVH = matRad_calcDVH(cst,LET_DBED,'cum');
+onlyProtonDVH = matRad_calcDVH(cst,onlyProton_DBED,'cum');
+refJointDVH = matRad_calcDVH(cst,RefJoint_DBED,'cum');
 
 fig = figure;
 
@@ -334,15 +347,15 @@ c = c+1;
 leg{c} = plot(NaN, 'Color',[0,0,0],'LineStyle','--','LineWidth',1.2);
 names{c} = 'Ref. Joint';
 c = c+1;
-axis([0,3,0,100])
+axis([0,80,0,100])
 legend ([leg{:}],names ) 
-xlabel('Fraction Dirty Dose [Gy]')
+xlabel(' Dirty BED [Gy]')
 ylabel('Volume [%]')
 set(gca,'FontSize',14)
 grid on
 
 %%
-%% Dirty Dose DVH
+%% LETxDose DVH
 DDtotalDVH  = matRad_calcDVH(cst,result_DD_over{1,1}.mLETDose,'cum');
 LETtotalDVH = matRad_calcDVH(cst,result_LET_over{1,1}.mLETDose,'cum');
 onlyProtonDVH = matRad_calcDVH(cst,onlyProton{1}.mLETDose,'cum');
@@ -387,3 +400,214 @@ xlabel('LET')
 ylabel('Volume [%]')
 grid on
 
+
+%% Quality indicators 
+
+DDoverQI =  matRad_calcQualityIndicators(cstQI,plnJO,DDoverTotal)
+LEToverQI =  matRad_calcQualityIndicators(cstQI,plnJO,LEToverTotal)
+onlyProtonQI = matRad_calcQualityIndicators(cstQI,plnJO,onlyProtonTotal)
+refJointQI = matRad_calcQualityIndicators(cstQI,plnJO,refJointTotal )
+
+%% xtract Values
+VOI = 7;
+Quant = 'mean';
+
+a(1) = onlyProtonQI(VOI).([Quant]);
+a(2) = refJointQI(VOI).([Quant]);
+a(3) = DDoverQI(VOI).([Quant]);
+a(4) = LEToverQI(VOI).([Quant])
+
+%% DD Quality indicators 
+% LET 
+
+DDoverQI =  matRad_calcQualityIndicators(cstQI,plnJO,result_DD_over{1,1}.dirtyDose)
+LEToverQI =  matRad_calcQualityIndicators(cstQI,plnJO,result_LET_over{1,1}.dirtyDose)
+onlyProtonQI = matRad_calcQualityIndicators(cstQI,plnJO, onlyProton{1}.dirtyDose)
+refJointQI = matRad_calcQualityIndicators(cstQI,plnJO,RefJoint{1,1}.dirtyDose)
+%% D BED 
+n = 5;
+a = 0.1;
+b = 0.05 ;
+
+DD_DBED = effect( n,result_DD_over{1,1}.dirtyDose, a, b) ;
+LET_DBED = effect( n,result_LET_over{1,1}.dirtyDose, a, b);
+onlyProton_DBED = effect( 30,onlyProton{1}.dirtyDose, a, b);
+RefJoint_DBED = effect( n,RefJoint{1,1}.dirtyDose, a, b);
+
+DDoverQI =  matRad_calcQualityIndicators(cstQI,plnJO,DD_DBED);
+LEToverQI =  matRad_calcQualityIndicators(cstQI,plnJO,LET_DBED);
+onlyProtonQI = matRad_calcQualityIndicators(cstQI,plnJO,onlyProton_DBED );
+refJointQI = matRad_calcQualityIndicators(cstQI,plnJO,RejJoint_DBED);
+%% 
+VOI = 3;
+Quant = 'std';
+
+a(1) = onlyProtonQI(VOI).([Quant]);
+a(2) = refJointQI(VOI).([Quant]);
+a(3) = DDoverQI(VOI).([Quant]);
+a(4) = LEToverQI(VOI).([Quant])
+
+
+%% 
+%% calc DVH for the current cube 
+
+% load('FinalResultUnder.mat')
+% load('D:\postDoc\LET_Paper\OnlyProton.mat')
+
+DDunderTotal= (pln(1).numOfFractions.*resultDD_Target{1,1}.effect + pln(2).numOfFractions.*resultDD_Target{1,2}.effect)./0.1;
+LETunderTotal = (pln(1).numOfFractions.*resultLET_Target{1,1}.effect + pln(2).numOfFractions.*resultLET_Target{1,2}.effect)./0.1;
+
+onlyProtonTotal = effect(30,onlyProton{1,1}.RBExD,0.1,0.05)./0.1  ;
+refJointTotal = (pln(1).numOfFractions.*RefJoint{1,1}.effect + pln(2).numOfFractions.*RefJoint{1,2}.effect)./0.1; 
+% resultDVH  = matRad_calcDVH(cst,totalPlan,'cum');
+% LET_DVH = resultDVH;
+%% total BED DVH
+cst = matRad_setOverlapPriorities(cst,ct.cubeDim);
+
+DDtotalDVH  = matRad_calcDVH(cst,DDunderTotal,'cum');
+LETtotalDVH = matRad_calcDVH(cst,LETunderTotal,'cum');
+onlyProtonDVH = matRad_calcDVH(cst,onlyProtonTotal,'cum');
+refJointDVH = matRad_calcDVH(cst,refJointTotal,'cum');
+
+figure,
+vois = [3,12,13,14,15];
+for i  = vois
+    plot(DDtotalDVH(i).doseGrid,DDtotalDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', '-.');
+    hold on
+    plot(LETtotalDVH(i).doseGrid,LETtotalDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', ':');
+    plot(onlyProtonDVH(i).doseGrid,onlyProtonDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', '-');
+    plot(refJointDVH(i).doseGrid,refJointDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', '--');
+end 
+hold on 
+c =1;
+leg = {};
+names = {};
+%custom legend
+for i = vois
+    leg{c} = plot(nan,'Color',cst{i,5}.visibleColor,'LineWidth',1.2);
+    hold on 
+    names{c} = cst{i,2}; 
+    c = c+1;
+
+end
+leg{c} = plot(NaN, 'Color',[0,0,0],'LineStyle','-.','LineWidth',1.2);
+names{c} = 'Joint DD';
+c = c+1;
+leg{c} = plot(NaN, 'Color',[0,0,0],'LineStyle',':','LineWidth',1.2);
+names{c} = 'Joint LET';
+c = c+1;
+leg{c} = plot(NaN, 'Color',[0,0,0],'LineStyle','-','LineWidth',1.2);
+names{c} = 'only Proton';
+c = c+1;
+leg{c} = plot(NaN, 'Color',[0,0,0],'LineStyle','--','LineWidth',1.2);
+names{c} = 'Ref. Joint';
+c = c+1;
+xlabel('BED [Gy]')
+ylabel('Volume [%]')
+legend ([leg{:}],names ) 
+set(gca,'FontSize',14)
+grid on
+
+%% Dirty Dose DVH
+DDtotalDVH  = matRad_calcDVH(cst,resultDD_Target{1,1}.dirtyDose*5,'cum');
+LETtotalDVH = matRad_calcDVH(cst,resultLET_Target{1,1}.dirtyDose*5,'cum');
+onlyProtonDVH = matRad_calcDVH(cst,onlyProton{1}.dirtyDose*30,'cum');
+refJointDVH = matRad_calcDVH(cst,RefJoint{1,1}.dirtyDose*5,'cum');
+
+
+DDtotalDVH  = matRad_calcDVH(cst,resultDD_Target{1,1}.dirtyDose,'cum');
+LETtotalDVH = matRad_calcDVH(cst,resultLET_Target{1,1}.dirtyDose,'cum');
+onlyProtonDVH = matRad_calcDVH(cst,onlyProton{1}.dirtyDose,'cum');
+refJointDVH = matRad_calcDVH(cst,RefJoint{1,1}.dirtyDose,'cum');
+
+DDtotalDVH  = matRad_calcDVH(cst,effect(5,resultDD_Target{1,1}.dirtyDose,0.1,0.05),'cum');
+LETtotalDVH = matRad_calcDVH(cst,effect(5,resultLET_Target{1,1}.dirtyDose ,0.1,0.05),'cum');
+onlyProtonDVH = matRad_calcDVH(cst,effect(30, onlyProton{1}.dirtyDose,0.1,0.05),'cum');
+refJointDVH = matRad_calcDVH(cst,effect(5,RefJoint{1,1}.dirtyDose ,0.1,0.05),'cum');
+%%
+%% D BED 
+n = 5;
+a = 0.1;
+b = 0.05 ;
+
+DD_DBED = effect( n,resultDD_Target{1,1}.dirtyDose, a, b) ;
+LET_DBED = effect( n,resultLET_Target{1,1}.dirtyDose, a, b);
+onlyProton_DBED = effect( 30,onlyProton{1}.dirtyDose, a, b);
+RefJoint_DBED = effect( n,RefJoint{1,1}.dirtyDose, a, b);
+
+DDoverQI =  matRad_calcQualityIndicators(cstQI,plnJO,DD_DBED);
+LEToverQI =  matRad_calcQualityIndicators(cstQI,plnJO,LET_DBED);
+onlyProtonQI = matRad_calcQualityIndicators(cstQI,plnJO,onlyProton_DBED );
+refJointQI = matRad_calcQualityIndicators(cstQI,plnJO,RefJoint_DBED);
+
+
+DDtotalDVH  = matRad_calcDVH(cst,DD_DBED,'cum');
+LETtotalDVH = matRad_calcDVH(cst,LET_DBED,'cum');
+onlyProtonDVH = matRad_calcDVH(cst,onlyProton_DBED,'cum');
+refJointDVH = matRad_calcDVH(cst,RefJoint_DBED,'cum');
+
+%%
+
+fig = figure;
+
+vois = [13];
+for i  = vois
+    plot(DDtotalDVH(i).doseGrid,DDtotalDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', '-.');
+    hold on
+    plot(LETtotalDVH(i).doseGrid,LETtotalDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', ':');
+    plot(onlyProtonDVH(i).doseGrid,onlyProtonDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', '-');
+    plot(refJointDVH(i).doseGrid,refJointDVH(i).volumePoints,'LineWidth',1.2,'Color',cst{i,5}.visibleColor,'LineStyle', '--');
+end 
+hold on 
+c =1;
+leg = {};
+names = {};
+%custom legend
+for i = vois
+    leg{c} = plot(nan,'Color',cst{i,5}.visibleColor,'LineWidth',1.2);
+    hold on 
+    names{c} = cst{i,2}; 
+    c = c+1;
+
+end
+leg{c} = plot(NaN, 'Color',[0,0,0],'LineStyle','-.','LineWidth',1.2);
+names{c} = 'Joint DD';
+c = c+1;
+leg{c} = plot(NaN, 'Color',[0,0,0],'LineStyle',':','LineWidth',1.2);
+names{c} = 'Joint LET';
+c = c+1;
+leg{c} = plot(NaN, 'Color',[0,0,0],'LineStyle','-','LineWidth',1.2);
+names{c} = 'only Proton';
+c = c+1;
+leg{c} = plot(NaN, 'Color',[0,0,0],'LineStyle','--','LineWidth',1.2);
+names{c} = 'Ref. Joint';
+c = c+1;
+% axis([0,3,0,100])
+legend ([leg{:}],names ) 
+xlabel(' Dirty BED [Gy]')
+ylabel('Volume [%]')
+set(gca,'FontSize',14)
+grid on
+
+%%
+%% DD Quality indicators 
+% LET 
+
+DDoverQI =  matRad_calcQualityIndicators(cstQI,plnJO,resultDD_Target{1,1}.dirtyDose*5)
+LEToverQI =  matRad_calcQualityIndicators(cstQI,plnJO,resultLET_Target{1,1}.dirtyDose*5)
+onlyProtonQI = matRad_calcQualityIndicators(cstQI,plnJO, onlyProton{1}.dirtyDose*30)
+refJointQI = matRad_calcQualityIndicators(cstQI,plnJO,RefJoint{1,1}.dirtyDose*5)
+
+DDoverQI =  matRad_calcQualityIndicators(cstQI,plnJO,DDunderTotal)
+LEToverQI =  matRad_calcQualityIndicators(cstQI,plnJO,LETunderTotal)
+onlyProtonQI = matRad_calcQualityIndicators(cstQI,plnJO,onlyProtonTotal)
+refJointQI = matRad_calcQualityIndicators(cstQI,plnJO,refJointTotal)
+
+%% 
+VOI = 13;
+Quant = 'std';
+
+a(1) = onlyProtonQI(VOI).([Quant]);
+a(2) = refJointQI(VOI).([Quant]);
+a(3) = DDoverQI(VOI).([Quant]);
+a(4) = LEToverQI(VOI).([Quant])

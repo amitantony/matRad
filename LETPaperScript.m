@@ -5,8 +5,8 @@ matRad_cfg = MatRad_Config.instance();
 matRad_cfg.propOpt.defaultMaxIter = 500000;
 matRad_cfg.propOpt.defaultAccChangeTol = 1e-06;
 % load TG119.mat
-load('D:\postDoc\LET_Paper\FinalResult.mat')
-load('D:\postDoc\LET_Paper\OnlyProton.mat')
+% load('D:\postDoc\LET_Paper\FinalResult.mat')
+% load('D:\postDoc\LET_Paper\OnlyProton.mat')
  %%
 % %% add core
 % cube = zeros(ct.cubeDim);
